@@ -412,6 +412,7 @@ SCS.Conversation = function() {
     this.appendItem = function(html, scroll) {
         if (_container.length > 0) {
             var atEnd = self._nearBottom();
+            html = self._processInlineImages(html);
             if ($("#typing").length > 0) {
                 $("#conversation #typing").before(html);
             } else {
@@ -460,6 +461,7 @@ SCS.Conversation = function() {
      */    
     this.prependItem = function(html, scroll) {
         if (_container.length > 0) {
+            html = self._processInlineImages(html);
             _container.prepend(html);
             if (scroll && self._nearBottom()) {
                 self.scrollToEnd();
@@ -484,6 +486,7 @@ SCS.Conversation = function() {
     this.appendBulk = function(html, scroll, origin, location) {
         if (_container.length > 0) {
             var atEnd = self._nearBottom();
+            html = self._processInlineImages(html);
             if (typeof origin != "undefined" && origin != "" && $("#"+origin).length > 0 && typeof location != "undefined") {
                 if (location == "before") {
                     $("#conversation #"+origin).before(html);
@@ -1035,7 +1038,7 @@ SCS.Conversation = function() {
                     self.messageMarkAs(id, status);
                 }
                 if (message != null) {
-                    $(".body", $m).html(message);
+                    $(".body", $m).html(self._processInlineImages('<div>'+message+'</div>').contents());
                 }
                 if (time != null) {
                     $(".time", $m).html(time);
@@ -1120,6 +1123,63 @@ SCS.Conversation = function() {
             return SCS.err.showError(510, "messageEndInlineEdit");
         }
     };
+    
+    /**
+     * Rules used in the detection of image URLs stored as 2 element Arrays.
+     * The first element of each is a regular expression that will be run
+     * against the HTML and the second is a function that will be called for
+     * each match.  It will be passed the matching text and it should return
+     * an Object containing the image url in the "url" key.  Optionally, the
+     * object can specify a CSS class (cssClass) and/or a title for the
+     * generated IMG tag.
+     * @private
+     */
+    this._inlineImageMappings = [
+        [
+            /^(https?:\/\/cl.ly\/\w+)$/i,
+            function(url) {
+                return { url: url+"/content", cssClass: "cloudly", title: url };
+            }
+        ],
+        [
+            /^(.+\.(?:png|jpe?g|gif))$/i,
+            function(url) {
+                return { url: url };
+            }
+            
+        ]
+    ];
+    
+    /**
+     * Detect image URLs and replace with inline images
+     * @private
+     * @param {String or Object} HTML or jQuery Object to process
+     * @type {Object} jQuery Object
+     */
+    this._processInlineImages = function(html) {
+        var el = $(html),
+            rules = this._inlineImageMappings;
+        $('a', el).each(function() {
+            try {
+                var t = $(this),
+                    url = t.attr('href'),
+                    m, rule, img_attr, img_el;
+                for (var i=0, n=rules.length; i<n; ++i) {
+                    rule = rules[i];
+                    m = url.match(rule[0]);
+                    if (m) {
+                        img_attr = $.extend({ title: m[1] }, rule[1](m[1]));
+                        img_el = $('<img src="'+img_attr.url+'" class="inlineImage '+(img_attr.cssClass || '')+'" title="'+img_attr.title+'" />');
+                        img_el.get(0).onerror = function() { t.removeClass('hasInlineImage').text(url); };
+                        t.addClass('hasInlineImage').html('').append(img_el);
+                        break;
+                    }
+                }
+            } catch (err) { }
+        });
+        return el;
+    };
+    
     
     /**
      * Init SCS.Conversation object

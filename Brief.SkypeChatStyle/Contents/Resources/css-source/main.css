@@ -223,6 +223,21 @@ button.decline {
 			);
 		}
 
+a.hasInlineImage {
+    border-bottom: 0 !important;
+    }
+    a.hasInlineImage img.inlineImage {
+        background-color:#fff;
+        border:1px solid #ccc;
+        margin:0;
+        max-height:120px;
+        max-width:120px;
+        padding:2px;
+        }
+    a.hasInlineImage:hover img.inlineImage {
+        background-color: #88a3c4;
+        }
+
 /*	@end */
 
 /*	@group Conversation Wrapper
